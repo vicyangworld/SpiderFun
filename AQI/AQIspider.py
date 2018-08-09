@@ -15,6 +15,26 @@ class AQIspider:
         self.cityDic = {}
         self.subLink = "/aqi/"
         
+    def __get_city_contents_recurise__(self, city, provinceName):
+        try:
+            cityName = city.get_text().split()
+            if len(cityName) == 1:
+                cname = ''.join(cityName)
+                clink = ''.join(city['href'].split())
+                if provinceName == r"直辖市" and (cname not in ['北京','天津','上海', '重庆']):
+                    return
+                if len(clink.split('_')) != 1:
+                    print(clink.split('_'))
+                    return
+                self.cityDic[provinceName + "-" + cname] = clink
+                print("get OK: " + provinceName + " " + clink)
+                return
+            else:
+                for acity in city.contents:
+                    self.__get_city_contents_recurise__(acity, provinceName)
+        except:
+            return None
+
     def get_all_city_links(self):
         allCityUrl = self.baseURL+self.subLink
         try:
@@ -34,19 +54,8 @@ class AQIspider:
                         if provinceName == r"热门城市":
                             provinceName = r"直辖市"
                     if provinceContentsItem.name == 'dd':
-                        for city in provinceContentsItem:
-                            try:
-                                cityName = city.get_text().replace(' ','')
-                                if provinceName == r"直辖市" and (cityName not in ['北京','天津','上海', '重庆']):
-                                    continue
-                                cityLink = ''.join(city['href'].split())
-                                if len(cityLink.split('_')) != 1:
-                                    print(cityLink.split('_'))
-                                    continue
-                            except:
-                                continue
-                            self.cityDic[provinceName + "-" + cityName] = cityLink
-                            print("get OK: "+cityLink)
+                        for city in provinceContentsItem.contents:
+                            self.__get_city_contents_recurise__(city,provinceName)
                            
     def save_all_city_links(self, outformat='json', filename='./city_name_link'):
         with open(filename+'.'+outformat,'w') as outfile:
