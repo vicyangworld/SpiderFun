@@ -24,7 +24,6 @@ class AQIspider:
         self.cityDic = {}
         self.subLink = "/aqi/"
         self.__dbName = "AQI.db" 
-        _, self.__lastDateInDB = get_date_begin_end(self.__dbName)
         self.__update = False
 
 
@@ -141,6 +140,8 @@ class AQIspider:
     def crawl(self, toSave=True, savePath="./", city='', update=False): 
         """ get all data and save """ 
         self.__update = update
+        if self.__update:
+            _, self.__lastDateInDB = get_date_begin_end(self.__dbName)
         if city != '':
             filenameDateset = os.path.join(savePath,"Dataset_"+str(city)+".csv")
             if os.path.exists(filenameDateset):
@@ -160,8 +161,8 @@ class AQIspider:
                 if not os.path.exists(savePathDataset):
                     os.makedirs(savePathDataset)
                 filenameDateset = os.path.join(savePathDataset,"Dataset_"+cityName+".csv")
-                # if os.path.exists(filenameDateset):
-                #     continue
+                if os.path.exists(filenameDateset) and not self.__update:
+                    continue
                 startURL = self.baseURL+item[1]
                 self.__crawl_a_city__(startURL, item[0], toSave, filenameDateset)
             
@@ -171,4 +172,4 @@ if __name__ == '__main__':
     # spider.get_all_city_links()
     # spider.save_all_city_links()
     spider.load_all_city_links()
-    spider.crawl(update=True)
+    spider.crawl(update=False)
