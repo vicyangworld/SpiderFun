@@ -6,6 +6,15 @@ import re
 import csv
 import os
 import json
+from toDataBase import fetch_db
+import datetime
+
+def get_date_begin_end(dbName):
+    command = "SELECT * FROM Date"
+    args = None
+    allData = fetch_db(dbName, command, args)
+    allData.sort()
+    return allData[0],allData[-1]
 
 class AQIspider:
     def __init__(self):
@@ -14,7 +23,11 @@ class AQIspider:
         self.dataList = []
         self.cityDic = {}
         self.subLink = "/aqi/"
-        
+        self.__dbName = "AQI.db" 
+        _, self.__lastDateInDB = get_date_begin_end(self.__dbName)
+        self.__update = False
+
+
     def __get_city_contents_recurise__(self, city, provinceName):
         try:
             cityName = city.get_text().split()
@@ -80,6 +93,8 @@ class AQIspider:
 
         for datalist in tablelist[1:]:
             data = [x for x in datalist.get_text().split() if x!='']
+            if self.__update and data[0] <= self.__lastDateInDB[0]:
+                continue
             self.dataList.append(data)
             print(cityName, data)
 
@@ -91,22 +106,30 @@ class AQIspider:
             print("ERROR: wrong input city name or the website " + url + " is invalid!")
             os._exit(0)
 
-        soup=BeautifulSoup(html,"lxml")
         cityName = url.split('/')[-1].split('.')[0]
+        soup=BeautifulSoup(html,"lxml")
         # find all links
         Sites=[]
-        re_str = "^("+self.subLink+str(cityName)+"-)"  #get all history data link of this city
+        if self.__update:
+            re_str = "^("+self.subLink+str(cityName)+"-"+''.join(self.__lastDateInDB[0].split('-')[0:2])+")"  #get all history data link of this city
+        else:
+            re_str = "^("+self.subLink+str(cityName)+"-)" 
+
         for link in soup.findAll(href=re.compile(re_str)):
             site=self.baseURL+link.attrs['href']
             Sites.append(site)
         Sites.reverse()
 
-        self.__getdata__(Sites[0], city_zh, True)
-        for url in Sites[1:]:
-            self.__getdata__(url, city_zh)
+        if not self.__update:
+            self.__getdata__(Sites[0], city_zh, True)
+            for url in Sites[1:]:
+                self.__getdata__(url, city_zh)
+        else:
+            for url in Sites[0:]:
+                self.__getdata__(url, city_zh)
 
         if toSave:
-            csvfile=open(outFilename,"w+")
+            csvfile=open(outFilename,"a+")
             try:
                 writer=csv.writer(csvfile)
                 for line in self.dataList:
@@ -115,8 +138,9 @@ class AQIspider:
             finally:
                 csvfile.close()
 
-    def crawl(self, toSave=True, savePath="./", city=''): 
+    def crawl(self, toSave=True, savePath="./", city='', update=False): 
         """ get all data and save """ 
+        self.__update = update
         if city != '':
             filenameDateset = os.path.join(savePath,"Dataset_"+str(city)+".csv")
             if os.path.exists(filenameDateset):
@@ -128,6 +152,7 @@ class AQIspider:
             if self.cityDic == {}:
                 print("please load city links first by load_all_city_links(*)")
                 os._exit(0)
+            
             for item in self.cityDic.items():
                 cityName = item[1].split('/')[-1].split('.')[0]
                 print('crawling '+ item[0] + '......')
@@ -135,10 +160,10 @@ class AQIspider:
                 if not os.path.exists(savePathDataset):
                     os.makedirs(savePathDataset)
                 filenameDateset = os.path.join(savePathDataset,"Dataset_"+cityName+".csv")
-                if os.path.exists(filenameDateset):
-                    continue
+                # if os.path.exists(filenameDateset):
+                #     continue
                 startURL = self.baseURL+item[1]
-                self.__crawl_a_city__(startURL, item[0] , toSave, filenameDateset)
+                self.__crawl_a_city__(startURL, item[0], toSave, filenameDateset)
             
 
 if __name__ == '__main__':
@@ -146,4 +171,4 @@ if __name__ == '__main__':
     # spider.get_all_city_links()
     # spider.save_all_city_links()
     spider.load_all_city_links()
-    spider.crawl()
+    spider.crawl(update=True)
