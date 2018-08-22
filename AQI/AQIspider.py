@@ -127,7 +127,7 @@ class AQIspider:
             for url in Sites[0:]:
                 self.__getdata__(url, city_zh)
 
-        if toSave:
+        if toSave and self.dataList:
             csvfile=open(outFilename,"a+")
             try:
                 writer=csv.writer(csvfile)
@@ -161,7 +161,8 @@ class AQIspider:
                 if not os.path.exists(savePathDataset):
                     os.makedirs(savePathDataset)
                 filenameDateset = os.path.join(savePathDataset,"Dataset_"+cityName+".csv")
-                if os.path.exists(filenameDateset) and not self.__update:
+                # if os.path.exists(filenameDateset) and not self.__update:
+                if os.path.exists(filenameDateset):
                     continue
                 startURL = self.baseURL+item[1]
                 self.__crawl_a_city__(startURL, item[0], toSave, filenameDateset)

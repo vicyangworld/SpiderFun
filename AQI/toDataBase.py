@@ -35,6 +35,10 @@ def creat_db(dbName):
                  range int,
                  pm25 int,
                  pm10 int,
+                 So2  int,
+                 No2  int,
+                 Co   float,
+                 O3   int,
                  FOREIGN KEY (date) REFERENCES Date(date))''')
     connect.commit()
     connect.close()
@@ -46,7 +50,7 @@ def insert_db(dbName, date, city):
         cursor.executemany("INSERT INTO Date VALUES (?)",date)
     if city != None:
         #cursor.execute("INSERT INTO City VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", city)
-        cursor.executemany("INSERT INTO City VALUES (?, ?, ?, ?, ?, ?, ?, ?)", city)
+        cursor.executemany("INSERT INTO City VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", city)
     connect.commit()
     connect.close()
 
@@ -84,7 +88,7 @@ def delete_db(dbName, city, date):
     cursor.execute('DELETE FROM City WHERE date=?',date)
     connect.close()
 
-def delete_db(dbName):
+def remove_db(dbName):
     os.remove(dbName) 
 
 def load_all_city_links(informat='json', filename='./city_name_link'):
@@ -95,7 +99,7 @@ def load_all_city_links(informat='json', filename='./city_name_link'):
 def saveDataToDatabase(filesPath = './', dataBaseName='AQI.db', update=False):
     dbName = os.path.join(filesPath, dataBaseName)
     if not update and os.path.exists(dbName):
-        delete_db(dbName)
+        remove_db(dbName)
 
     if not os.path.exists(dbName):
         creat_db(dbName)
@@ -138,7 +142,9 @@ def saveDataToDatabase(filesPath = './', dataBaseName='AQI.db', update=False):
                     tempCity = ( _cityName_zh, province, 
                                 line[0], line[1], 
                                 int(line[2]), int(line[3]),
-                                int(line[4]), int(line[5])
+                                int(line[4]), int(line[5]),
+                                int(line[6]), int(line[7]),
+                                float(line[8]), int(line[9])
                     )
                     City.append(tempCity)
                 except:
@@ -156,10 +162,15 @@ def saveDataToDatabase(filesPath = './', dataBaseName='AQI.db', update=False):
 if __name__ == "__main__":
     dbName = 'AQI.db'
     
-    #saveDataToDatabase(update=False)
+    saveDataToDatabase(update=False)
 
-    # command = "SELECT * FROM City WHERE City.date=?"
-    # args = '2018-08-15'
+    command = "SELECT * FROM City WHERE City.date=?"
+    args = '2015-01-01'
     # command = "SELECT * FROM City WHERE City.aqi>=200"
     # args = None
-    print(get_date_begin_end('AQI.db'))
+    # print(get_date_begin_end('AQI.db'))
+    # command = "SELECT * FROM City WHERE City.name LIKE '甘南'"
+    # args=None
+    print(len(fetch_db(dbName,command,args)))
+    # for item in fetch_db(dbName,command,args):
+    #     print(item)
